@@ -452,12 +452,65 @@
   }
   .btn-export:hover { background: #245070; }
 
+  /* ── WORD COUNTER ─────────────────────────────── */
+  .textarea-wrap { position: relative; }
+  .word-counter {
+    display: block; text-align: right; font-size: 11px;
+    font-family: 'DM Mono', monospace; letter-spacing: 0.04em;
+    margin-top: 4px; color: var(--ink3); transition: color 0.2s;
+  }
+  .word-counter.warn  { color: #92400E; font-weight: 600; }
+  .word-counter.over  { color: #9B2C2C; font-weight: 700; }
+  .word-counter.over::after { content: ' — consider shortening'; font-weight: 400; }
+  .save-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; margin: 16px 0;
+    background: var(--surface2); border-radius: var(--radius);
+    border: 1px solid var(--border2); flex-wrap: wrap;
+  }
+  .save-bar-label {
+    font-size: 13px; color: var(--ink3); font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em; flex: 1; min-width: 160px;
+  }
+  .save-bar-label strong { color: var(--accent); }
+  .btn-save {
+    padding: 7px 16px; border-radius: 6px; border: 1.5px solid var(--accent);
+    background: transparent; color: var(--accent); font-size: 13px;
+    font-family: 'DM Mono', monospace; letter-spacing: 0.06em;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-save:hover { background: var(--accent); color: #fff; }
+  .resume-box {
+    display: none; margin: 0 0 24px;
+    padding: 20px 24px; border-radius: var(--radius);
+    background: #FFF8E7; border: 2px solid #F0B429;
+  }
+  .resume-box.visible { display: block; }
+  .resume-box h3 { margin: 0 0 8px; font-size: 15px; color: #7B5200; font-family: 'DM Mono', monospace; }
+  .resume-box p  { margin: 0 0 14px; font-size: 13px; color: var(--ink2); line-height: 1.5; }
+  .resume-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .toast {
+    position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+    padding: 12px 22px; border-radius: 8px; font-size: 14px;
+    font-family: 'DM Mono', monospace; letter-spacing: 0.04em;
+    background: var(--ink1); color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    opacity: 0; transform: translateY(12px);
+    transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: #22543D; }
+  .toast.warning { background: #7B5200; }
+  .toast.error   { background: #9B2C2C; }
+
   /* ── SUMMARY ── */
   #summary-panel {
     display: none;
-    padding: 40px 52px 80px;
+    padding: 0 0 80px;
   }
   #summary-panel.active { display: block; }
+  #summary-panel > div {
+    padding: 24px 52px 0;
+  }
   .summary-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 24px 28px;
@@ -489,7 +542,8 @@
     .content { padding: 24px 24px 60px; }
     .site-header { padding: 20px 24px; }
     .dim-nav { padding: 0 16px; }
-    #summary-panel { padding: 24px 24px 60px; }
+    #summary-panel { padding: 0 0 60px; }
+    #summary-panel > div { padding: 16px 16px 0; }
   }
 
   /* ── INTRO ── */
@@ -576,6 +630,16 @@
 
       <div class="intro-block">
         <div class="intro-title">About this Survey — PIANC Working Group 263</div>
+
+        <!-- RESUME BOX — shown when localStorage has a saved session -->
+        <div class="resume-box" id="resume-box">
+          <h3>⚠ Saved session detected</h3>
+          <p>A previously saved session was found in this browser. You can resume from where you left off, or start a new session (this will clear the saved data).</p>
+          <div class="resume-actions">
+            <button class="btn btn-export" onclick="resumeFromStorage()">Resume saved session</button>
+            <button class="btn btn-ghost" onclick="clearStorageAndReset()">Start fresh</button>
+          </div>
+        </div>
 
         <strong>Context and Objectives</strong><br>
         This survey is part of the work of <strong>PIANC InCom Working Group 263 — Key Elements and
@@ -746,6 +810,13 @@
       </section>
 
       <div class="nav-buttons">
+        <div class="save-bar" style="width:100%; margin-bottom:0">
+          <span class="save-bar-label" id="storage-status-id">Auto-save: <strong>not yet started</strong></span>
+          <label class="btn-save" style="cursor:pointer">
+            📂 Resume from file
+            <input type="file" accept=".json" style="display:none" onchange="resumeFromFile(event)">
+          </label>
+        </div>
         <span style="font-size:13px; color:var(--ink3); font-style:italic" id="id-nav-hint">
           Select a response scope above (ID.07) to proceed.
         </span>
@@ -826,7 +897,9 @@
         <div class="question">
           <div class="question-id">EN.IF.05</div>
           <p class="question-text">Please briefly describe the institutional arrangements (key institutions, coordination bodies, distribution of responsibilities). If possible, include examples and links (e.g., legislation, official pages, cooperation agreements).</p>
-          <textarea name="EN_IF_05" placeholder="Key institutions, coordination bodies, distribution of responsibilities, references to legislation or official pages, cooperation agreements…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_IF_05" placeholder="Key institutions, coordination bodies, distribution of responsibilities, references to legislation or official pages, cooperation agreements…"></textarea>
+          <span class="word-counter" id="wc-EN_IF_05">0 / 400 words</span>
+        </div>
         </div>
       </section>
 
@@ -848,17 +921,6 @@
           </div>
         </div>
 
-        <div class="question" data-validity="check3a">
-          <div class="question-id">EN.REG.01a</div>
-          <p class="question-text">Does a specific legal or regulatory provision address the coexistence and prioritisation of inland navigation alongside other water uses (e.g. energy generation, irrigation, water supply, fisheries, or environmental flows)?</p>
-          <div class="option-group" data-field="EN.REG.01a">
-            <label class="opt-label"><input type="radio" name="VAL_CHECK3A" value="Yes_dedicated"><span class="opt-indicator"></span>Yes — there is a dedicated legal provision or instrument</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK3A" value="Yes_broader"><span class="opt-indicator"></span>Yes — navigation is addressed within a broader water resources or basin management framework</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK3A" value="No"><span class="opt-indicator"></span>No — no formal provision governs this coexistence</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK3A" value="NA"><span class="opt-indicator"></span>Not applicable — no significant multiple-use conflicts exist</label>
-          </div>
-        </div>
-
         <div class="question">
           <div class="question-id">EN.REG.02</div>
           <p class="question-text">Please indicate which regulatory mechanisms for waterway infrastructure and services are currently in effect:</p>
@@ -871,23 +933,25 @@
         <div class="question">
           <div class="question-id">EN.REG.03</div>
           <p class="question-text">Describe key regulatory instruments (laws, decrees, policies).</p>
-          <textarea name="EN_REG_03" placeholder="List and briefly describe the main legal/regulatory instruments in place..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_REG_03" placeholder="List and briefly describe the main legal/regulatory instruments in place..."></textarea>
+          <span class="word-counter" id="wc-EN_REG_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
-          <div class="question-id">EN.REG.04</div>
+          <div class="question-id">EN.REG.04 — EN.REG.05</div>
           <p class="question-text">Are PIANC or other international guidelines used?</p>
           <div class="option-group" data-field="EN.REG.04">
             <label class="opt-label"><input type="radio" name="EN_REG_04" value="Yes" onchange="toggleConditional('en-reg-05','Yes,Partial')"><span class="opt-indicator"></span>Yes</label>
             <label class="opt-label"><input type="radio" name="EN_REG_04" value="Partial" onchange="toggleConditional('en-reg-05','Yes,Partial')"><span class="opt-indicator"></span>Partial</label>
             <label class="opt-label"><input type="radio" name="EN_REG_04" value="No" onchange="toggleConditional('en-reg-05','')"><span class="opt-indicator"></span>No</label>
           </div>
+          <div class="conditional sub-section" id="en-reg-05">
+            <span class="input-label">If applicable, please describe which main international guidelines are used and how they are internalized in practice.</span>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_REG_05" placeholder="e.g. PIANC reports adopted as technical standards, UNECE recommendations incorporated into national legislation, World Bank guidelines used in project appraisal… Please include references or links where available."></textarea>
+          <span class="word-counter" id="wc-EN_REG_05">0 / 400 words</span>
         </div>
-
-        <div class="question" id="en-reg-05">
-          <div class="question-id">EN.REG.05</div>
-          <p class="question-text">If applicable, please describe which main international guidelines are used and how they are internalized in practice.</p>
-          <textarea name="EN_REG_05" placeholder="e.g. PIANC reports adopted as technical standards, UNECE recommendations incorporated into national legislation, World Bank guidelines used in project appraisal… Please include references or links where available."></textarea>
+          </div>
         </div>
       </section>
 
@@ -900,18 +964,15 @@
         <p class="element-description">Guarantee of open information, compliance with laws, and accountability in public management.</p>
 
         <div class="question">
-          <div class="question-id">EN.GOV.01</div>
+          <div class="question-id">EN.GOV.01 — EN.GOV.02</div>
           <p class="question-text">Does your country, region, or commission ensure <strong>transparency, accountability, and rule of law</strong> in inland waterway governance?</p>
           <div class="option-group" data-field="EN.GOV.01">
             <label class="opt-label"><input type="radio" name="EN_GOV_01" value="Yes" onchange="toggleConditional('en-gov-02','Yes,Partially')"><span class="opt-indicator"></span>Yes</label>
             <label class="opt-label"><input type="radio" name="EN_GOV_01" value="Partially" onchange="toggleConditional('en-gov-02','Yes,Partially')"><span class="opt-indicator"></span>Partially</label>
             <label class="opt-label"><input type="radio" name="EN_GOV_01" value="No" onchange="toggleConditional('en-gov-02','')"><span class="opt-indicator"></span>No</label>
           </div>
-        </div>
-
-        <div class="question" id="en-gov-02">
-          <div class="question-id">EN.GOV.02</div>
-          <p class="question-text">If Yes or Partially, please indicate which mechanisms are in place:</p>
+          <div class="conditional" id="en-gov-02">
+          <div class="question-id" style="margin-top:16px; color:var(--ink3); font-size:12px">EN.GOV.02 — If Yes or Partially, please indicate which mechanisms are in place:</div>
           <div class="sub-section">
             <div class="sub-label">A. Transparency Mechanisms</div>
             <table class="matrix-table"><thead><tr><th>Mechanism</th><th>Yes</th><th>Partially</th><th>No</th></tr></thead>
@@ -928,11 +989,14 @@
             <tbody id="en-gov-rol-body"></tbody></table>
           </div>
         </div>
+        </div><!-- end en-gov-02 conditional -->
 
         <div class="question">
           <div class="question-id">EN.GOV.03</div>
           <p class="question-text">Qualitative Assessment — Please describe how transparency, accountability and rule of law are implemented in practice. Provide examples, links or references.</p>
-          <textarea name="EN_GOV_03" placeholder="Examples, public portals, audit reports, references..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_GOV_03" placeholder="Examples, public portals, audit reports, references..."></textarea>
+          <span class="word-counter" id="wc-EN_GOV_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -948,8 +1012,10 @@
 
               <div>
                 <span class="input-label">Which frameworks?</span>
-                <textarea name="EN_GOV_04_frameworks" rows="2"
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_GOV_04_frameworks" rows="2"
                   placeholder="e.g. OECD Principles on Water Governance, UN SDG frameworks, World Bank Governance Indicators, PIANC…"></textarea>
+          <span class="word-counter" id="wc-EN_GOV_04_frameworks">0 / 400 words</span>
+        </div>
               </div>
 
               <div>
@@ -968,14 +1034,18 @@
 
               <div>
                 <span class="input-label">How are they applied?</span>
-                <textarea name="EN_GOV_04_application" rows="2"
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_GOV_04_application" rows="2"
                   placeholder="e.g. incorporated into national legislation, used as reference in project design, adopted as internal guidelines…"></textarea>
+          <span class="word-counter" id="wc-EN_GOV_04_application">0 / 400 words</span>
+        </div>
               </div>
 
               <div>
                 <span class="input-label">References or links:</span>
-                <textarea name="EN_GOV_04_references" rows="2"
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_GOV_04_references" rows="2"
                   placeholder="Official pages, legislation, reports, cooperation agreements…"></textarea>
+          <span class="word-counter" id="wc-EN_GOV_04_references">0 / 400 words</span>
+        </div>
               </div>
 
             </div>
@@ -1029,7 +1099,9 @@
         <div class="question">
           <div class="question-id">EN.PAR.03</div>
           <p class="question-text">Please describe how stakeholder engagement and public participation are implemented in practice. Provide examples and references.</p>
-          <textarea name="EN_PAR_03" placeholder="Consultations, committees, participatory planning processes, links..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_PAR_03" placeholder="Consultations, committees, participatory planning processes, links..."></textarea>
+          <span class="word-counter" id="wc-EN_PAR_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -1045,8 +1117,10 @@
 
               <div>
                 <span class="input-label">Which frameworks?</span>
-                <textarea name="EN_PAR_04_frameworks" rows="2"
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_PAR_04_frameworks" rows="2"
                   placeholder="e.g. OECD Stakeholder Engagement Guidelines, Aarhus Convention, UN SDG 16, World Bank Participation Sourcebook, PIANC…"></textarea>
+          <span class="word-counter" id="wc-EN_PAR_04_frameworks">0 / 400 words</span>
+        </div>
               </div>
 
               <div>
@@ -1065,14 +1139,18 @@
 
               <div>
                 <span class="input-label">How are they applied?</span>
-                <textarea name="EN_PAR_04_application" rows="2"
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_PAR_04_application" rows="2"
                   placeholder="e.g. incorporated into consultation procedures, used as reference for river basin committees, adopted in environmental licensing processes…"></textarea>
+          <span class="word-counter" id="wc-EN_PAR_04_application">0 / 400 words</span>
+        </div>
               </div>
 
               <div>
                 <span class="input-label">References or links:</span>
-                <textarea name="EN_PAR_04_references" rows="2"
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="EN_PAR_04_references" rows="2"
                   placeholder="Official pages, legislation, reports, cooperation agreements…"></textarea>
+          <span class="word-counter" id="wc-EN_PAR_04_references">0 / 400 words</span>
+        </div>
               </div>
 
             </div>
@@ -1080,9 +1158,11 @@
         </div>
       </section>
 
-      <div class="nav-buttons">
-        <span></span>
-        <button class="btn btn-primary" onclick="switchDim(2)">Next: Operational Dimension →</button>
+      <div class="nav-buttons" id="nav-dim1">
+        <div class="save-bar" style="width:100%">
+          <span class="save-bar-label">Auto-save active — progress stored in this browser</span>
+          <button class="btn-save" onclick="saveProgressToFile()">💾 Save progress to file</button>
+        </div>
       </div>
     </div>
 
@@ -1108,19 +1188,19 @@
         <p class="element-description">Allocation of resources and execution of works for infrastructure improvement and maintenance.</p>
 
         <div class="question">
-          <div class="question-id">OP.INF.01</div>
+          <div class="question-id">OP.INF.01 — OP.INF.02</div>
           <p class="question-text">Is there a structured framework or program in place for the financing, implementation, and maintenance of inland waterway infrastructure (locks, ship lifts, navigation channels, signaling facilities)?</p>
           <div class="option-group" data-field="OP.INF.01">
-            <label class="opt-label"><input type="radio" name="OP_INF_01" value="Yes"><span class="opt-indicator"></span>Yes</label>
-            <label class="opt-label"><input type="radio" name="OP_INF_01" value="Partially"><span class="opt-indicator"></span>Partially</label>
-            <label class="opt-label"><input type="radio" name="OP_INF_01" value="No"><span class="opt-indicator"></span>No</label>
+            <label class="opt-label"><input type="radio" name="OP_INF_01" value="Yes" onchange="toggleConditional('op-inf-02','Yes,Partially')"><span class="opt-indicator"></span>Yes</label>
+            <label class="opt-label"><input type="radio" name="OP_INF_01" value="Partially" onchange="toggleConditional('op-inf-02','Yes,Partially')"><span class="opt-indicator"></span>Partially</label>
+            <label class="opt-label"><input type="radio" name="OP_INF_01" value="No" onchange="toggleConditional('op-inf-02','')"><span class="opt-indicator"></span>No</label>
           </div>
+          <div class="conditional sub-section" id="op-inf-02">
+            <span class="input-label">If Yes or Partially: Please describe how investments and maintenance activities are planned and financed. Indicate whether funding mechanisms are stable or project-based, how maintenance priorities are defined, and whether performance indicators are monitored. Are there fees or charges that fund infrastructure improvements?</span>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_INF_02" placeholder="Funding mechanisms, priority setting, annual investment levels, fees/charges..."></textarea>
+          <span class="word-counter" id="wc-OP_INF_02">0 / 400 words</span>
         </div>
-
-        <div class="question">
-          <div class="question-id">OP.INF.02</div>
-          <p class="question-text">Please describe how investments and maintenance activities are planned and financed. Indicate whether funding mechanisms are stable or project-based, how maintenance priorities are defined, and whether performance indicators are monitored. Are there fees or charges that fund infrastructure improvements?</p>
-          <textarea name="OP_INF_02" placeholder="Funding mechanisms, priority setting, annual investment levels, fees/charges..."></textarea>
+          </div>
         </div>
 
         <div class="question">
@@ -1132,7 +1212,9 @@
             <label class="opt-label"><input type="radio" name="OP_INF_03" value="No" onchange="toggleConditional('op-inf-03b','')"><span class="opt-indicator"></span>No</label>
           </div>
           <div class="conditional sub-section" id="op-inf-03b">
-            <textarea name="OP_INF_03b" placeholder="Describe how long-term maintenance cycles are scheduled and enforced..."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_INF_03b" placeholder="Describe how long-term maintenance cycles are scheduled and enforced..."></textarea>
+          <span class="word-counter" id="wc-OP_INF_03b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -1169,7 +1251,9 @@
         <div class="question">
           <div class="question-id">OP.INF.07</div>
           <p class="question-text">What are the standard practices to minimize environmental impact during construction and maintenance activities?</p>
-          <textarea name="OP_INF_07" placeholder="Sensitive period avoidance, plan revisions, environmental monitoring..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_INF_07" placeholder="Sensitive period avoidance, plan revisions, environmental monitoring..."></textarea>
+          <span class="word-counter" id="wc-OP_INF_07">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -1315,7 +1399,9 @@
               <input type="text" name="OP_INF_08a_methods_other" placeholder="Please specify…" style="max-width:480px">
             </div>
             <span class="input-label" style="margin-top:12px; display:block">Please briefly describe how these methods are applied and their effectiveness:</span>
-            <textarea name="OP_INF_08a_desc" rows="2" placeholder="Stretch or reach where applied, objectives (reduce dredging frequency, improve navigability), results observed, references or links…"></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_INF_08a_desc" rows="2" placeholder="Stretch or reach where applied, objectives (reduce dredging frequency, improve navigability), results observed, references or links…"></textarea>
+          <span class="word-counter" id="wc-OP_INF_08a_desc">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -1329,7 +1415,9 @@
           </div>
           <div class="conditional sub-section" id="op-inf-08b-detail">
             <span class="input-label">Please briefly describe the WwN approaches adopted and their context:</span>
-            <textarea name="OP_INF_08b_desc" rows="2" placeholder="e.g. riparian vegetation used for bank stabilization, floodplain reconnection to reduce peak sediment loads, bioengineering structures replacing conventional revetments… Include references or links where available."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_INF_08b_desc" rows="2" placeholder="e.g. riparian vegetation used for bank stabilization, floodplain reconnection to reduce peak sediment loads, bioengineering structures replacing conventional revetments… Include references or links where available."></textarea>
+          <span class="word-counter" id="wc-OP_INF_08b_desc">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -1342,7 +1430,9 @@
             <label class="opt-label"><input type="radio" name="OP_INF_09" value="No" onchange="toggleConditional('op-inf-09b','')"><span class="opt-indicator"></span>No</label>
           </div>
           <div class="conditional sub-section" id="op-inf-09b">
-            <textarea name="OP_INF_09b" placeholder="Which reports/frameworks, total or partial use, links..."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_INF_09b" placeholder="Which reports/frameworks, total or partial use, links..."></textarea>
+          <span class="word-counter" id="wc-OP_INF_09b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -1377,7 +1467,9 @@
         <div class="question">
           <div class="question-id">OP.FLEET.03</div>
           <p class="question-text">Please answer the following qualitative questions about the fleet:</p>
-          <textarea name="OP_FLEET_03" placeholder="Vessel/fleet alignment with channel specs; status of assisted or autonomous navigation; supporting infrastructure; fleet renewal programmes..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_FLEET_03" placeholder="Vessel/fleet alignment with channel specs; status of assisted or autonomous navigation; supporting infrastructure; fleet renewal programmes..."></textarea>
+          <span class="word-counter" id="wc-OP_FLEET_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -1408,7 +1500,9 @@
             <label class="opt-label"><input type="radio" name="OP_FLEET_05" value="No" onchange="toggleConditional('op-fleet-05b','')"><span class="opt-indicator"></span>No</label>
           </div>
           <div class="conditional sub-section" id="op-fleet-05b">
-            <textarea name="OP_FLEET_05b" placeholder="Which references and how they are used..."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_FLEET_05b" placeholder="Which references and how they are used..."></textarea>
+          <span class="word-counter" id="wc-OP_FLEET_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -1434,7 +1528,9 @@
         <div class="question">
           <div class="question-id">OP.NC.02</div>
           <p class="question-text">How are responsibilities distributed among actors (national, regional, operators)?</p>
-          <textarea name="OP_NC_02" placeholder="Describe the distribution of responsibilities..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_NC_02" placeholder="Describe the distribution of responsibilities..."></textarea>
+          <span class="word-counter" id="wc-OP_NC_02">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -1521,7 +1617,9 @@
               </div>
               <div class="conditional sub-section" id="op-nc-14b">
                 <span class="input-label">Please briefly describe how climate impacts are incorporated (approach, instruments, plan name):</span>
-                <textarea name="OP_NC_14_desc" rows="2" placeholder="e.g. dynamic minimum draft protocol based on seasonal hydrological forecasts, low-water management plan…"></textarea>
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_NC_14_desc" rows="2" placeholder="e.g. dynamic minimum draft protocol based on seasonal hydrological forecasts, low-water management plan…"></textarea>
+          <span class="word-counter" id="wc-OP_NC_14_desc">0 / 400 words</span>
+        </div>
                 <span class="input-label" style="margin-top:8px; display:block">Reference or link (if available):</span>
                 <input type="text" name="OP_NC_14_link" placeholder="https://… or document title" style="max-width:540px">
               </div>
@@ -1535,7 +1633,9 @@
               </div>
               <div class="conditional sub-section" id="op-nc-15b">
                 <span class="input-label">Please briefly describe the contingency plan (scope, triggers, responsible authority):</span>
-                <textarea name="OP_NC_15_desc" rows="2" placeholder="e.g. closure protocol for drought below critical depth, flood alert and vessel restriction procedures…"></textarea>
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_NC_15_desc" rows="2" placeholder="e.g. closure protocol for drought below critical depth, flood alert and vessel restriction procedures…"></textarea>
+          <span class="word-counter" id="wc-OP_NC_15_desc">0 / 400 words</span>
+        </div>
                 <span class="input-label" style="margin-top:8px; display:block">Reference or link (if available):</span>
                 <input type="text" name="OP_NC_15_link" placeholder="https://… or document title" style="max-width:540px">
               </div>
@@ -1550,7 +1650,9 @@
               </div>
               <div class="conditional sub-section" id="op-nc-16b">
                 <span class="input-label">Please briefly describe the adaptive management practices and include a reference or link if available:</span>
-                <textarea name="OP_NC_16b" rows="2" placeholder="e.g. dynamic draft management based on real-time water level data, seasonal navigation windows…"></textarea>
+                <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_NC_16b" rows="2" placeholder="e.g. dynamic draft management based on real-time water level data, seasonal navigation windows…"></textarea>
+          <span class="word-counter" id="wc-OP_NC_16b">0 / 400 words</span>
+        </div>
                 <input type="text" name="OP_NC_16_link" placeholder="https://… or document title" style="max-width:540px; margin-top:8px">
               </div>
             </div>
@@ -1567,7 +1669,9 @@
             <label class="opt-label"><input type="radio" name="OP_NC_17" value="No" onchange="toggleConditional('op-nc-17b','')"><span class="opt-indicator"></span>No</label>
           </div>
           <div class="conditional sub-section" id="op-nc-17b">
-            <textarea name="OP_NC_17b" placeholder="Which references, how applied..."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_NC_17b" placeholder="Which references, how applied..."></textarea>
+          <span class="word-counter" id="wc-OP_NC_17b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -1581,19 +1685,19 @@
         <p class="element-description">Systems supporting navigation safety and emergency response.</p>
 
         <div class="question">
-          <div class="question-id">OP.SUP.01</div>
-          <p class="question-text">Does your country, region, or institution have functional operational support systems for inland waterways (navigation safety tools, emergency response plans, up-to-date hydrographic information)?</p>
+          <div class="question-id">OP.SUP.01 — OP.SUP.02</div>
+          <p class="question-text">Does your country, region, or commission have functional operational support systems for inland waterways (navigation safety tools, emergency response plans, up-to-date hydrographic information)?</p>
           <div class="option-group" data-field="OP.SUP.01">
-            <label class="opt-label"><input type="radio" name="OP_SUP_01" value="Yes"><span class="opt-indicator"></span>Yes</label>
-            <label class="opt-label"><input type="radio" name="OP_SUP_01" value="Partially"><span class="opt-indicator"></span>Partially</label>
-            <label class="opt-label"><input type="radio" name="OP_SUP_01" value="No"><span class="opt-indicator"></span>No</label>
+            <label class="opt-label"><input type="radio" name="OP_SUP_01" value="Yes" onchange="toggleConditional('op-sup-02','Yes,Partially')"><span class="opt-indicator"></span>Yes</label>
+            <label class="opt-label"><input type="radio" name="OP_SUP_01" value="Partially" onchange="toggleConditional('op-sup-02','Yes,Partially')"><span class="opt-indicator"></span>Partially</label>
+            <label class="opt-label"><input type="radio" name="OP_SUP_01" value="No" onchange="toggleConditional('op-sup-02','')"><span class="opt-indicator"></span>No</label>
           </div>
+          <div class="conditional sub-section" id="op-sup-02">
+            <span class="input-label">If Yes or Partially: Describe key systems in place (VTS, communication networks, emergency protocols), how they are maintained, and recent emergency incidents and responses.</span>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_SUP_02" placeholder="Systems description, maintenance procedures, recent incidents…"></textarea>
+          <span class="word-counter" id="wc-OP_SUP_02">0 / 400 words</span>
         </div>
-
-        <div class="question">
-          <div class="question-id">OP.SUP.02</div>
-          <p class="question-text">Describe key systems in place (VTS, communication networks, emergency protocols), how they are maintained, and recent emergency incidents and responses.</p>
-          <textarea name="OP_SUP_02" placeholder="Systems description, maintenance procedures, recent incidents…"></textarea>
+          </div>
         </div>
 
         <div class="question">
@@ -1616,7 +1720,9 @@
           </div>
           <div class="conditional sub-section" id="op-sup-04b">
             <span class="input-label">Please describe the types of training or certification, institutions responsible, identified shortages, and measures taken:</span>
-            <textarea name="OP_SUP_04b" placeholder="Types of training/certification, institutions responsible, identified shortages, measures taken…"></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_SUP_04b" placeholder="Types of training/certification, institutions responsible, identified shortages, measures taken…"></textarea>
+          <span class="word-counter" id="wc-OP_SUP_04b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -1630,7 +1736,9 @@
           </div>
           <div class="conditional sub-section" id="op-sup-05b">
             <span class="input-label">Please describe the survey frequency, coverage, responsible authority, and how data is made available:</span>
-            <textarea name="OP_SUP_05b" placeholder="e.g. annual bathymetric surveys on main channels, data published on national portal, surveys contracted to specialized firms… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_SUP_05b" placeholder="e.g. annual bathymetric surveys on main channels, data published on national portal, surveys contracted to specialized firms… Include references or links."></textarea>
+          <span class="word-counter" id="wc-OP_SUP_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -1674,7 +1782,9 @@
           </div>
           <div class="conditional sub-section" id="op-sup-07b">
             <span class="input-label">Please describe which standards are applied and how:</span>
-            <textarea name="OP_SUP_07b" placeholder="e.g. IALA guidelines for aids to navigation, EU RIS Directive for vessel tracking and reporting, PIANC WG 246 on River Information Services, IMO standards adapted for inland waters… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_SUP_07b" placeholder="e.g. IALA guidelines for aids to navigation, EU RIS Directive for vessel tracking and reporting, PIANC WG 246 on River Information Services, IMO standards adapted for inland waters… Include references or links."></textarea>
+          <span class="word-counter" id="wc-OP_SUP_07b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -1708,14 +1818,18 @@
             <label class="opt-label"><input type="checkbox" name="OP_MON_02" value="infrastructure"><span class="opt-indicator square"></span>Infrastructure performance (locks, channels, terminals)</label>
           </div>
           <div class="sub-section">
-            <textarea name="OP_MON_02b" placeholder="Parameters monitored, frequency (real-time/periodic/event-based), reporting..."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_MON_02b" placeholder="Parameters monitored, frequency (real-time/periodic/event-based), reporting..."></textarea>
+          <span class="word-counter" id="wc-OP_MON_02b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
         <div class="question">
           <div class="question-id">OP.MON.03</div>
           <p class="question-text">Please describe what is monitored, how frequently, and whether monitoring reports or bulletins are regularly produced. Include examples or references where available.</p>
-          <textarea name="OP_MON_03" placeholder="Parameters, monitoring frequency, type of output (real-time dashboard, periodic bulletin, event-based alert), responsible institution, examples or links…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_MON_03" placeholder="Parameters, monitoring frequency, type of output (real-time dashboard, periodic bulletin, event-based alert), responsible institution, examples or links…"></textarea>
+          <span class="word-counter" id="wc-OP_MON_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -1759,7 +1873,9 @@
           </div>
           <div class="conditional sub-section" id="op-mon-05b">
             <span class="input-label">Please describe which standards/platforms are applied and how:</span>
-            <textarea name="OP_MON_05b" placeholder="e.g. EU RIS Directive implemented for vessel tracking, UNECE guidelines for hydrological reporting, CESNI standards for electronic ship reporting, IALA recommendations for aids to navigation, IMO standards adapted for inland waters, PIANC recommendations for monitoring intervals… Include references or links where available."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_MON_05b" placeholder="e.g. EU RIS Directive implemented for vessel tracking, UNECE guidelines for hydrological reporting, CESNI standards for electronic ship reporting, IALA recommendations for aids to navigation, IMO standards adapted for inland waters, PIANC recommendations for monitoring intervals… Include references or links where available."></textarea>
+          <span class="word-counter" id="wc-OP_MON_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -1795,7 +1911,9 @@
         <div class="question">
           <div class="question-id">OP.KPI.03</div>
           <p class="question-text">List the core KPIs used (e.g. freight volume, ton-kilometres, accident rate, CO₂ emissions per unit of transport, number of navigable days, compliance rate with channel dimensions) and explain how they are tracked, reviewed, and used to drive improvements. Provide examples of KPI targets or benchmark data, and references to performance reports.</p>
-          <textarea name="OP_KPI_03" placeholder="KPI names, targets, tracking methods, improvement mechanisms, references to reports or dashboards…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_KPI_03" placeholder="KPI names, targets, tracking methods, improvement mechanisms, references to reports or dashboards…"></textarea>
+          <span class="word-counter" id="wc-OP_KPI_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -1870,28 +1988,9 @@
           </div>
           <div class="conditional sub-section" id="op-kpi-05b">
             <span class="input-label">Please describe which frameworks are used and how KPIs are aligned:</span>
-            <textarea name="OP_KPI_05b" placeholder="e.g. PIANC WG 111 performance indicators adopted, OECD transport statistics methodology followed, World Bank logistics performance index used as benchmark… Include references or links."></textarea>
-          </div>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_KPI_05b" placeholder="e.g. PIANC WG 111 performance indicators adopted, OECD transport statistics methodology followed, World Bank logistics performance index used as benchmark… Include references or links."></textarea>
+          <span class="word-counter" id="wc-OP_KPI_05b">0 / 400 words</span>
         </div>
-      </section>
-
-      <!-- ATTENTION CHECK — placed at midpoint of questionnaire -->
-      <section class="element-section" style="border-left-color: var(--border2)">
-        <div class="element-header">
-          <span class="element-code" style="color:var(--ink3)">—</span>
-          <span class="element-title" style="color:var(--ink2)">General Question</span>
-        </div>
-
-        <div class="question" data-validity="attention">
-          <div class="question-id">— Attention Check</div>
-          <p class="question-text">In the context of inland waterway infrastructure assessment, which of the following is <strong>not</strong> typically considered a key operational safety indicator?</p>
-          <p class="input-hint" style="margin-bottom:12px">Please read all options carefully before selecting.</p>
-          <div class="option-group vertical" data-field="ATTN_CHECK">
-            <label class="opt-label"><input type="radio" name="VAL_ATTN" value="min_depth"><span class="opt-indicator"></span>Minimum navigable depth</label>
-            <label class="opt-label"><input type="radio" name="VAL_ATTN" value="channel_width"><span class="opt-indicator"></span>Channel width at critical sections</label>
-            <label class="opt-label"><input type="radio" name="VAL_ATTN" value="bridge_clearance"><span class="opt-indicator"></span>Bridge and overhead clearance</label>
-            <label class="opt-label"><input type="radio" name="VAL_ATTN" value="port_revenue"><span class="opt-indicator"></span>Annual port revenue per vessel call</label>
-            <label class="opt-label"><input type="radio" name="VAL_ATTN" value="aids_nav"><span class="opt-indicator"></span>Availability of aids to navigation (buoys, beacons, signals)</label>
           </div>
         </div>
       </section>
@@ -1918,17 +2017,19 @@
           <div class="question-id">OP.OPR.02</div>
           <p class="question-text">Please mark which elements below have routine operational activities carried out under defined procedures and whether they are regularly evaluated: (Select all that apply)</p>
           <div class="option-group vertical">
-            <label class="opt-label"><input type="checkbox" name="OP_OPR_02" value="inspections"><span class="opt-indicator square"></span>Inspections (infrastructure safety inspections, etc.)</label>
-            <label class="opt-label"><input type="checkbox" name="OP_OPR_02" value="maintenance"><span class="opt-indicator square"></span>Maintenance execution</label>
-            <label class="opt-label"><input type="checkbox" name="OP_OPR_02" value="control"><span class="opt-indicator square"></span>Operational control (e.g., traffic control, lock operations, service coordination)</label>
-            <label class="opt-label"><input type="checkbox" name="OP_OPR_02" value="none"><span class="opt-indicator square"></span>None of the above</label>
+            <label class="opt-label"><input type="checkbox" name="OP_OPR_02" value="inspections" onchange="exclusiveCheckbox(this,'OP_OPR_02','none')"><span class="opt-indicator square"></span>Inspections (infrastructure safety inspections, etc.)</label>
+            <label class="opt-label"><input type="checkbox" name="OP_OPR_02" value="maintenance" onchange="exclusiveCheckbox(this,'OP_OPR_02','none')"><span class="opt-indicator square"></span>Maintenance execution</label>
+            <label class="opt-label"><input type="checkbox" name="OP_OPR_02" value="control" onchange="exclusiveCheckbox(this,'OP_OPR_02','none')"><span class="opt-indicator square"></span>Operational control (e.g., traffic control, lock operations, service coordination)</label>
+            <label class="opt-label"><input type="checkbox" name="OP_OPR_02" value="none" onchange="exclusiveCheckbox(this,'OP_OPR_02','none')"><span class="opt-indicator square"></span>None of the above</label>
           </div>
         </div>
 
         <div class="question">
           <div class="question-id">OP.OPR.03</div>
           <p class="question-text">Describe how operational procedures and waterway assets are organized for assessments, inspections, and scheduling of maintenance and whether they align with national or international guidelines.</p>
-          <textarea name="OP_OPR_03" placeholder="Organizational structure of operational procedures, alignment with national standards or international guidelines, responsible authorities, examples…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_OPR_03" placeholder="Organizational structure of operational procedures, alignment with national standards or international guidelines, responsible authorities, examples…"></textarea>
+          <span class="word-counter" id="wc-OP_OPR_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -1974,7 +2075,9 @@
           </div>
           <div class="conditional sub-section" id="op-opr-05b">
             <span class="input-label">Please describe which guidance is used and how it is applied:</span>
-            <textarea name="OP_OPR_05b" placeholder="e.g. PIANC lock operation guidelines, IMO safety management code adapted for inland waters, national regulations based on UNECE standards… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_OPR_05b" placeholder="e.g. PIANC lock operation guidelines, IMO safety management code adapted for inland waters, national regulations based on UNECE standards… Include references or links."></textarea>
+          <span class="word-counter" id="wc-OP_OPR_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -2010,7 +2113,9 @@
         <div class="question">
           <div class="question-id">OP.ACC.03</div>
           <p class="question-text">Describe access rules, pricing, booking systems, priority frameworks, how fairness is ensured, and how conflicts or congestion are managed.</p>
-          <textarea name="OP_ACC_03" placeholder="Access rules, pricing, booking systems, priority frameworks, conflict management…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_ACC_03" placeholder="Access rules, pricing, booking systems, priority frameworks, conflict management…"></textarea>
+          <span class="word-counter" id="wc-OP_ACC_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -2047,7 +2152,9 @@
           </div>
           <div class="conditional sub-section" id="op-acc-05b">
             <span class="input-label">Please describe which references are used and how:</span>
-            <textarea name="OP_ACC_05b" placeholder="e.g. EU port services regulation applied to inland terminals, UNECE guidelines on access to waterways, PIANC recommendations on fairway use… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_ACC_05b" placeholder="e.g. EU port services regulation applied to inland terminals, UNECE guidelines on access to waterways, PIANC recommendations on fairway use… Include references or links."></textarea>
+          <span class="word-counter" id="wc-OP_ACC_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -2105,7 +2212,9 @@
         <div class="question">
           <div class="question-id">OP.MOOR.03</div>
           <p class="question-text">Describe how berthing facilities are assessed, how accessibility is ensured, and how berthing areas are distributed and managed.</p>
-          <textarea name="OP_MOOR_03" placeholder="Assessment procedures, accessibility criteria, geographic distribution, responsible authority, management arrangements, examples or references…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_MOOR_03" placeholder="Assessment procedures, accessibility criteria, geographic distribution, responsible authority, management arrangements, examples or references…"></textarea>
+          <span class="word-counter" id="wc-OP_MOOR_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -2143,7 +2252,9 @@
           </div>
           <div class="conditional sub-section" id="op-moor-05b">
             <span class="input-label">Please describe which standards are applied and how:</span>
-            <textarea name="OP_MOOR_05b" placeholder="e.g. PIANC guidelines on inland terminal design, national berthing standards, EU requirements for public landing stages… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_MOOR_05b" placeholder="e.g. PIANC guidelines on inland terminal design, national berthing standards, EU requirements for public landing stages… Include references or links."></textarea>
+          <span class="word-counter" id="wc-OP_MOOR_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -2179,7 +2290,9 @@
         <div class="question">
           <div class="question-id">OP.MULTI.03</div>
           <p class="question-text">Describe key multimodal connections, corridors, intermodal terminals, collaboration platforms, barriers and enabling factors.</p>
-          <textarea name="OP_MULTI_03" placeholder="Connections, corridors, terminals, barriers, enabling factors…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_MULTI_03" placeholder="Connections, corridors, terminals, barriers, enabling factors…"></textarea>
+          <span class="word-counter" id="wc-OP_MULTI_03">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -2219,14 +2332,18 @@
           </div>
           <div class="conditional sub-section" id="op-multi-05b">
             <span class="input-label">Please describe which frameworks are used and how multimodal integration is guided:</span>
-            <textarea name="OP_MULTI_05b" placeholder="e.g. EU TEN-T corridors including inland waterways, UNECE AGN Agreement, PIANC WG 216 on multimodal logistics platforms… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="OP_MULTI_05b" placeholder="e.g. EU TEN-T corridors including inland waterways, UNECE AGN Agreement, PIANC WG 216 on multimodal logistics platforms… Include references or links."></textarea>
+          <span class="word-counter" id="wc-OP_MULTI_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
 
-      <div class="nav-buttons">
-        <button class="btn btn-ghost" onclick="switchDim(1)">← Ethical-Normative</button>
-        <button class="btn btn-primary" onclick="switchDim(3)">Next: Adaptive &amp; Sustainable →</button>
+      <div class="nav-buttons" id="nav-dim2">
+        <div class="save-bar" style="width:100%">
+          <span class="save-bar-label">Auto-save active — progress stored in this browser</span>
+          <button class="btn-save" onclick="saveProgressToFile()">💾 Save progress to file</button>
+        </div>
       </div>
     </div>
 
@@ -2296,7 +2413,9 @@
           </div>
           <div class="conditional sub-section" id="ad-sus-04b">
             <span class="input-label">Please describe the mechanisms in place:</span>
-            <textarea name="AD_SUS_04b" placeholder="e.g. EU CEF funds for greening inland ports, national subsidies for LNG/electric vessels, tax incentives for environmental upgrades… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_SUS_04b" placeholder="e.g. EU CEF funds for greening inland ports, national subsidies for LNG/electric vessels, tax incentives for environmental upgrades… Include references or links."></textarea>
+          <span class="word-counter" id="wc-AD_SUS_04b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -2322,7 +2441,9 @@
         <div class="question">
           <div class="question-id">AD.SUS.06</div>
           <p class="question-text">Describe the long-term strategy, action plans, emission targets, investment arrangements, and environmental licensing processes.</p>
-          <textarea name="AD_SUS_06" placeholder="Strategy details, targets, investment, licensing..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_SUS_06" placeholder="Strategy details, targets, investment, licensing..."></textarea>
+          <span class="word-counter" id="wc-AD_SUS_06">0 / 400 words</span>
+        </div>
         </div>
       </section>
 
@@ -2372,21 +2493,12 @@
           </div>
         </div>
 
-        <div class="question" data-validity="check1">
-          <div class="question-id">AD.RISK.03a — Infrastructure Safety Compliance</div>
-          <p class="question-text">What percentage of waterway terminal and wharf facilities in your country, region, or commission currently meet applicable safety requirements?</p>
-          <div class="option-group" data-field="AD.RISK.03a" style="flex-direction:column; gap:6px">
-            <label class="opt-label"><input type="radio" name="VAL_CHECK1" value=">90%"><span class="opt-indicator"></span>&gt;90%</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK1" value="75-90%"><span class="opt-indicator"></span>75% – 90%</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK1" value="50-75%"><span class="opt-indicator"></span>50% – 75%</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK1" value="<50%"><span class="opt-indicator"></span>&lt;50%</label>
-          </div>
-        </div>
-
         <div class="question">
           <div class="question-id">AD.RISK.04</div>
           <p class="question-text">Describe the contents of risk assessments and contingency plans and how importance/impact is assessed.</p>
-          <textarea name="AD_RISK_04" placeholder="Risk assessment methodology, contingency plan contents, impact assessment…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_RISK_04" placeholder="Risk assessment methodology, contingency plan contents, impact assessment…"></textarea>
+          <span class="word-counter" id="wc-AD_RISK_04">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -2399,7 +2511,9 @@
           </div>
           <div class="conditional sub-section" id="ad-risk-05b">
             <span class="input-label">Please describe which frameworks are applied and how:</span>
-            <textarea name="AD_RISK_05b" placeholder="e.g. ISO 31000 risk management framework adopted, EU Floods Directive implemented, PIANC WG 241 crisis management guidelines used… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_RISK_05b" placeholder="e.g. ISO 31000 risk management framework adopted, EU Floods Directive implemented, PIANC WG 241 crisis management guidelines used… Include references or links."></textarea>
+          <span class="word-counter" id="wc-AD_RISK_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -2417,16 +2531,16 @@
           <p class="question-text">Which advanced or emerging digital technologies have been adopted or are under active development for inland waterway management in your country, region, or commission? (Select all that apply)</p>
           <p class="input-hint" style="margin-bottom:10px">Note: Standard operational tools such as RIS, AIS, VTS and real-time water level monitoring are covered in Dimension 2 (OP.NC.09 and OP.MON). Please indicate here technologies that go beyond routine operational use — i.e., those that are advanced, innovative, or at pilot/experimental stage.</p>
           <div class="option-group vertical">
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="digital_twins"><span class="opt-indicator square"></span>Digital twins of waterway infrastructure</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="remote_sensing"><span class="opt-indicator square"></span>Remote sensing or satellite data for channel and bathymetric monitoring</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="ml_analytics"><span class="opt-indicator square"></span>Machine learning / predictive analytics (e.g. sedimentation forecasting, demand prediction)</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="autonomous"><span class="opt-indicator square"></span>Autonomous or semi-autonomous vessels / automation of navigation operations</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="smart_locks"><span class="opt-indicator square"></span>Smart lock operations (automated, remotely controlled)</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="blockchain"><span class="opt-indicator square"></span>Blockchain or distributed ledger for freight documentation and traceability</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="iot"><span class="opt-indicator square"></span>IoT sensors for real-time infrastructure condition monitoring</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="drones"><span class="opt-indicator square"></span>Drones / UAVs for inspection or survey</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="other" onchange="toggleOtherText(this,'ad-inn-01-other')"><span class="opt-indicator square"></span>Other</label>
-            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="none"><span class="opt-indicator square"></span>None — no advanced digital technologies currently adopted</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="digital_twins" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>Digital twins of waterway infrastructure</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="remote_sensing" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>Remote sensing or satellite data for channel and bathymetric monitoring</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="ml_analytics" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>Machine learning / predictive analytics (e.g. sedimentation forecasting, demand prediction)</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="autonomous" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>Autonomous or semi-autonomous vessels / automation of navigation operations</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="smart_locks" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>Smart lock operations (automated, remotely controlled)</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="blockchain" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>Blockchain or distributed ledger for freight documentation and traceability</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="iot" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>IoT sensors for real-time infrastructure condition monitoring</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="drones" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>Drones / UAVs for inspection or survey</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="other" onchange="exclusiveCheckbox(this,'AD_INN_01','none'); toggleOtherText(this,'ad-inn-01-other')"><span class="opt-indicator square"></span>Other</label>
+            <label class="opt-label"><input type="checkbox" name="AD_INN_01" value="none" onchange="exclusiveCheckbox(this,'AD_INN_01','none')"><span class="opt-indicator square"></span>None — no advanced digital technologies currently adopted</label>
           </div>
           <div class="conditional" id="ad-inn-01-other" style="margin-top:8px">
             <input type="text" name="AD_INN_01_other" placeholder="Please specify the other advanced technology…" style="max-width:540px">
@@ -2443,7 +2557,9 @@
           </div>
           <div class="conditional sub-section" id="ad-inn-02b">
             <span class="input-label">Please describe coordination mechanisms or platforms involved:</span>
-            <textarea name="AD_INN_02b" placeholder="e.g. data sharing with port community systems, integrated RIS covering road–waterway interfaces, national logistics digitalization programme… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_INN_02b" placeholder="e.g. data sharing with port community systems, integrated RIS covering road–waterway interfaces, national logistics digitalization programme… Include references or links."></textarea>
+          <span class="word-counter" id="wc-AD_INN_02b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -2457,7 +2573,9 @@
           </div>
           <div class="conditional sub-section" id="ad-inn-03b">
             <span class="input-label">Please specify which technologies and at what scale:</span>
-            <textarea name="AD_INN_03b" placeholder="e.g. LNG bunkering stations, electric push-boats in pilot corridors, shore power (cold ironing) at inland ports, hydrogen feasibility studies… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_INN_03b" placeholder="e.g. LNG bunkering stations, electric push-boats in pilot corridors, shore power (cold ironing) at inland ports, hydrogen feasibility studies… Include references or links."></textarea>
+          <span class="word-counter" id="wc-AD_INN_03b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -2471,14 +2589,18 @@
           </div>
           <div class="conditional sub-section" id="ad-inn-04b">
             <span class="input-label">Please name institutions and describe the nature of collaboration:</span>
-            <textarea name="AD_INN_04b" placeholder="e.g. joint R&D with Delft University on autonomous navigation, industry consortium for green propulsion testing, public-private partnership for smart lock operations… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_INN_04b" placeholder="e.g. joint R&D with Delft University on autonomous navigation, industry consortium for green propulsion testing, public-private partnership for smart lock operations… Include references or links."></textarea>
+          <span class="word-counter" id="wc-AD_INN_04b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
         <div class="question">
           <div class="question-id">AD.INN.05</div>
           <p class="question-text">Describe the main innovation and technology initiatives under way or recently completed, their objectives, scale, and outcomes.</p>
-          <textarea name="AD_INN_05" placeholder="Technologies, objectives, scale, number of projects, R&D partnerships, key outcomes or lessons learned…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_INN_05" placeholder="Technologies, objectives, scale, number of projects, R&D partnerships, key outcomes or lessons learned…"></textarea>
+          <span class="word-counter" id="wc-AD_INN_05">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -2491,7 +2613,9 @@
           </div>
           <div class="conditional sub-section" id="ad-inn-06b">
             <span class="input-label">Please describe which frameworks are referenced:</span>
-            <textarea name="AD_INN_06b" placeholder="e.g. PIANC WG 210 Smart Shipping, EU Green Deal and FuelEU Maritime, UNECE recommendations on e-navigation for inland waterways… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_INN_06b" placeholder="e.g. PIANC WG 210 Smart Shipping, EU Green Deal and FuelEU Maritime, UNECE recommendations on e-navigation for inland waterways… Include references or links."></textarea>
+          <span class="word-counter" id="wc-AD_INN_06b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
@@ -2586,14 +2710,18 @@
           </div>
           <div class="conditional sub-section" id="ad-train-05b">
             <span class="input-label">Please describe the partnerships and international programmes involved:</span>
-            <textarea name="AD_TRAIN_05b" placeholder="e.g. Danube Commission joint training for lock operators, UNECE e-navigation training programme, bilateral agreement for professional exchange with Rhine Navigation…"></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_TRAIN_05b" placeholder="e.g. Danube Commission joint training for lock operators, UNECE e-navigation training programme, bilateral agreement for professional exchange with Rhine Navigation…"></textarea>
+          <span class="word-counter" id="wc-AD_TRAIN_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
         <div class="question">
           <div class="question-id">AD.TRAIN.06</div>
           <p class="question-text">Describe training frequency, standards followed, duration, contents, and requalification validity.</p>
-          <textarea name="AD_TRAIN_06" placeholder="Frequency, standards, duration, contents, requalification cycle…"></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_TRAIN_06" placeholder="Frequency, standards, duration, contents, requalification cycle…"></textarea>
+          <span class="word-counter" id="wc-AD_TRAIN_06">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -2606,14 +2734,18 @@
           </div>
           <div class="conditional sub-section" id="ad-train-07b">
             <span class="input-label">Please describe which frameworks are applied:</span>
-            <textarea name="AD_TRAIN_07b" placeholder="e.g. EU Directive 2017/2397 on recognition of professional qualifications, STCW-I adapted for inland waters, PIANC training recommendations… Include references or links."></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="AD_TRAIN_07b" placeholder="e.g. EU Directive 2017/2397 on recognition of professional qualifications, STCW-I adapted for inland waters, PIANC training recommendations… Include references or links."></textarea>
+          <span class="word-counter" id="wc-AD_TRAIN_07b">0 / 400 words</span>
+        </div>
           </div>
         </div>
       </section>
 
-      <div class="nav-buttons">
-        <button class="btn btn-ghost" onclick="switchDim(2)">← Operational</button>
-        <button class="btn btn-primary" onclick="switchDim(4)">Next: Territorial Dimension →</button>
+      <div class="nav-buttons" id="nav-dim3">
+        <div class="save-bar" style="width:100%">
+          <span class="save-bar-label">Auto-save active — progress stored in this browser</span>
+          <button class="btn-save" onclick="saveProgressToFile()">💾 Save progress to file</button>
+        </div>
       </div>
     </div>
 
@@ -2648,17 +2780,6 @@
           </div>
         </div>
 
-        <div class="question" data-validity="check3b">
-          <div class="question-id">TR.LAND.01a</div>
-          <p class="question-text">Is the relationship between inland navigation and other water uses (energy, irrigation, fisheries, environment, water supply) governed by a formal legal or policy instrument in your country, region, or commission?</p>
-          <div class="option-group" data-field="TR.LAND.01a">
-            <label class="opt-label"><input type="radio" name="VAL_CHECK3B" value="Yes_dedicated"><span class="opt-indicator"></span>Yes — by a dedicated legal instrument (e.g. waterway act, basin management law)</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK3B" value="Yes_broader"><span class="opt-indicator"></span>Yes — within a broader water resources, environmental or spatial planning framework</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK3B" value="No"><span class="opt-indicator"></span>No — no formal instrument governs this relationship</label>
-            <label class="opt-label"><input type="radio" name="VAL_CHECK3B" value="NA"><span class="opt-indicator"></span>Not applicable — no significant interaction between navigation and other uses exists</label>
-          </div>
-        </div>
-
         <div class="question">
           <div class="question-id">TR.LAND.02</div>
           <p class="question-text">What is the territorial scale of the inland waterway project(s) or governance arrangements for which you are responding? (Select all that apply)</p>
@@ -2676,14 +2797,14 @@
           <div class="question-id">TR.LAND.03</div>
           <p class="question-text">Do inland waterway projects interact with other spatially oriented public policies? (Select all that apply)</p>
           <div class="option-group vertical">
-            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="agriculture"><span class="opt-indicator square"></span>Agriculture and livestock</label>
-            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="industrial"><span class="opt-indicator square"></span>Industrial development</label>
-            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="trade"><span class="opt-indicator square"></span>Domestic trade, services, and distribution</label>
-            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="intl_trade"><span class="opt-indicator square"></span>International trade and foreign trade corridors</label>
-            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="clusters"><span class="opt-indicator square"></span>Productive clusters</label>
-            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="logistics"><span class="opt-indicator square"></span>Logistics corridors / development axes</label>
-            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="none"><span class="opt-indicator square"></span>No significant interaction</label>
-            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="other" onchange="toggleOtherText(this,'tr-land-03-other')"><span class="opt-indicator square"></span>Other</label>
+            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="agriculture" onchange="exclusiveCheckbox(this,'TR_LAND_03','none')"><span class="opt-indicator square"></span>Agriculture and livestock</label>
+            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="industrial" onchange="exclusiveCheckbox(this,'TR_LAND_03','none')"><span class="opt-indicator square"></span>Industrial development</label>
+            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="trade" onchange="exclusiveCheckbox(this,'TR_LAND_03','none')"><span class="opt-indicator square"></span>Domestic trade, services, and distribution</label>
+            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="intl_trade" onchange="exclusiveCheckbox(this,'TR_LAND_03','none')"><span class="opt-indicator square"></span>International trade and foreign trade corridors</label>
+            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="clusters" onchange="exclusiveCheckbox(this,'TR_LAND_03','none')"><span class="opt-indicator square"></span>Productive clusters</label>
+            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="logistics" onchange="exclusiveCheckbox(this,'TR_LAND_03','none')"><span class="opt-indicator square"></span>Logistics corridors / development axes</label>
+            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="none" onchange="exclusiveCheckbox(this,'TR_LAND_03','none')"><span class="opt-indicator square"></span>No significant interaction</label>
+            <label class="opt-label"><input type="checkbox" name="TR_LAND_03" value="other" onchange="exclusiveCheckbox(this,'TR_LAND_03','none'); toggleOtherText(this,'tr-land-03-other')"><span class="opt-indicator square"></span>Other</label>
           </div>
           <div class="conditional" id="tr-land-03-other" style="margin-top:8px">
             <input type="text" name="TR_LAND_03_other" placeholder="Please specify the other spatially oriented policy interaction…" style="max-width:540px">
@@ -2693,13 +2814,17 @@
         <div class="question">
           <div class="question-id">TR.LAND.04</div>
           <p class="question-text">Describe how planning is carried out, how linkages with other policies operate, and how conflicts over water use are managed.</p>
-          <textarea name="TR_LAND_04" placeholder="Planning process, inter-policy linkages, conflict management..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="TR_LAND_04" placeholder="Planning process, inter-policy linkages, conflict management..."></textarea>
+          <span class="word-counter" id="wc-TR_LAND_04">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
           <div class="question-id">TR.LAND.05</div>
           <p class="question-text">How does your country, region or commission deal with real-life cases of conflict over water use? Please provide any recent examples, including instances where navigation has been suspended to allow for other uses.</p>
-          <textarea name="TR_LAND_05" placeholder="Case examples, conflict resolution, navigation suspension instances..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="TR_LAND_05" placeholder="Case examples, conflict resolution, navigation suspension instances..."></textarea>
+          <span class="word-counter" id="wc-TR_LAND_05">0 / 400 words</span>
+        </div>
         </div>
       </section>
 
@@ -2712,18 +2837,15 @@
         <p class="element-description">Coordination between different administrative levels and institutional arrangements.</p>
 
         <div class="question">
-          <div class="question-id">TR.MLG.01</div>
+          <div class="question-id">TR.MLG.01 — TR.MLG.02</div>
           <p class="question-text">Is there an established governance arrangement for coordination, network-based action, or supervised delegation of activities related to waterway infrastructure?</p>
           <div class="option-group" data-field="TR.MLG.01">
-            <label class="opt-label"><input type="radio" name="TR_MLG_01" value="Yes"><span class="opt-indicator"></span>Yes</label>
-            <label class="opt-label"><input type="radio" name="TR_MLG_01" value="Partially"><span class="opt-indicator"></span>Partially</label>
-            <label class="opt-label"><input type="radio" name="TR_MLG_01" value="No"><span class="opt-indicator"></span>No</label>
+            <label class="opt-label"><input type="radio" name="TR_MLG_01" value="Yes" onchange="toggleConditional('tr-mlg-02','Yes,Partially')"><span class="opt-indicator"></span>Yes</label>
+            <label class="opt-label"><input type="radio" name="TR_MLG_01" value="Partially" onchange="toggleConditional('tr-mlg-02','Yes,Partially')"><span class="opt-indicator"></span>Partially</label>
+            <label class="opt-label"><input type="radio" name="TR_MLG_01" value="No" onchange="toggleConditional('tr-mlg-02','')"><span class="opt-indicator"></span>No</label>
           </div>
-        </div>
-
-        <div class="question">
-          <div class="question-id">TR.MLG.02</div>
-          <p class="question-text">If Yes or Partially, the arrangement is primarily linked to which sector(s)? (Select all that apply)</p>
+          <div class="conditional sub-section" id="tr-mlg-02">
+          <div class="question-id" style="margin-top:8px; color:var(--ink3); font-size:12px">TR.MLG.02 — If Yes or Partially, the arrangement is primarily linked to which sector(s)? (Select all that apply)</div>
           <div class="option-group vertical">
             <label class="opt-label"><input type="checkbox" name="TR_MLG_02" value="transport"><span class="opt-indicator square"></span>Transport</label>
             <label class="opt-label"><input type="checkbox" name="TR_MLG_02" value="water"><span class="opt-indicator square"></span>Water resources management</label>
@@ -2734,13 +2856,14 @@
           <div class="conditional" id="tr-mlg-02-other" style="margin-top:8px">
             <input type="text" name="TR_MLG_02_other" placeholder="Please specify the other sector linked to the governance arrangement…" style="max-width:480px">
           </div>
+          </div><!-- end tr-mlg-02 conditional -->
         </div>
 
         <div class="question">
           <div class="question-id">TR.MLG.03 – TR.MLG.05</div>
-          <p class="question-text">Please respond to the following governance arrangements questions:</p>
-          <table class="matrix-table">
-            <thead><tr><th>Question</th><th>Yes</th><th>Partially</th><th>No</th></tr></thead>
+          <p class="question-text">Please respond to the following multilevel governance questions:</p>
+          <table class="matrix-table" id="op-mlg-matrix">
+            <thead><tr><th>Item</th><th>Yes</th><th>Partially</th><th>No</th></tr></thead>
             <tbody id="tr-mlg-body"></tbody>
           </table>
         </div>
@@ -2748,7 +2871,9 @@
         <div class="question">
           <div class="question-id">TR.MLG.06</div>
           <p class="question-text">Describe how governance related to inland waterways is organized: centralized or decentralized, networked or siloed, participatory, multisectoral, and observable impacts on other sectors. Include examples and references.</p>
-          <textarea name="TR_MLG_06" placeholder="Governance organization, coordination mechanisms, institutions involved, observed impacts..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="TR_MLG_06" placeholder="Governance organization, coordination mechanisms, institutions involved, observed impacts..."></textarea>
+          <span class="word-counter" id="wc-TR_MLG_06">0 / 400 words</span>
+        </div>
         </div>
       </section>
 
@@ -2794,7 +2919,9 @@
         <div class="question">
           <div class="question-id">TR.NET.04</div>
           <p class="question-text">Describe existing networks — composition, objectives, interaction frequency, decision-making role, and risks from political, social, or economic change.</p>
-          <textarea name="TR_NET_04" placeholder="Network composition, objectives, frequency, decision-making role, risks..."></textarea>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="TR_NET_04" placeholder="Network composition, objectives, frequency, decision-making role, risks..."></textarea>
+          <span class="word-counter" id="wc-TR_NET_04">0 / 400 words</span>
+        </div>
         </div>
 
         <div class="question">
@@ -2806,7 +2933,9 @@
             <label class="opt-label"><input type="radio" name="TR_NET_05" value="No" onchange="toggleConditional('tr-net-05b','')"><span class="opt-indicator"></span>No</label>
           </div>
           <div class="conditional sub-section" id="tr-net-05b">
-            <textarea name="TR_NET_05b" placeholder="Which frameworks, how applied, references…"></textarea>
+            <div class="textarea-wrap"><textarea data-maxwords="400" name="TR_NET_05b" placeholder="Which frameworks, how applied, references…"></textarea>
+          <span class="word-counter" id="wc-TR_NET_05b">0 / 400 words</span>
+        </div>
           </div>
         </div>
 
@@ -2822,43 +2951,57 @@
 
             <div>
               <span class="input-label">A. Institutional arrangements and division of responsibilities</span>
-              <textarea name="TR_NET_06_institutions" rows="3"
+              <div class="textarea-wrap"><textarea data-maxwords="500" name="TR_NET_06_institutions" rows="3"
                 placeholder="e.g. how responsibilities for dredging, aids to navigation, safety, and environmental monitoring are allocated between riparian states; role of joint commissions or bilateral agreements; decision-making structure; legal framework governing shared use…"></textarea>
+          <span class="word-counter" id="wc-TR_NET_06_institutions">0 / 500 words</span>
+        </div>
             </div>
 
             <div>
               <span class="input-label">B. Coordination and interaction mechanisms</span>
-              <textarea name="TR_NET_06_coordination" rows="3"
+              <div class="textarea-wrap"><textarea data-maxwords="500" name="TR_NET_06_coordination" rows="3"
                 placeholder="e.g. regular meetings of national authorities, joint technical committees, data-sharing platforms, harmonised regulations, dispute resolution mechanisms, existing protocols or treaties…"></textarea>
+          <span class="word-counter" id="wc-TR_NET_06_coordination">0 / 500 words</span>
+        </div>
             </div>
 
             <div>
               <span class="input-label">C. Routine challenges — for commissions and transboundary arrangements</span>
               <p style="font-size:13px; color:var(--ink3); margin:4px 0 8px; font-style:italic">If you represent an international commission or a transboundary governance body, please describe the main recurring challenges you face in promoting and maintaining the best possible navigational and operational conditions of the shared waterway.</p>
-              <textarea name="TR_NET_06_challenges" rows="3"
+              <div class="textarea-wrap"><textarea data-maxwords="500" name="TR_NET_06_challenges" rows="3"
                 placeholder="e.g. diverging national priorities or regulatory standards, funding asymmetries between member states, coordination of dredging or maintenance schedules, climate-related constraints affecting navigability, political or diplomatic constraints, data availability and harmonisation…"></textarea>
+          <span class="word-counter" id="wc-TR_NET_06_challenges">0 / 500 words</span>
+        </div>
             </div>
 
             <div>
               <span class="input-label">D. Good practices and lessons learned</span>
-              <textarea name="TR_NET_06_practices" rows="2"
+              <div class="textarea-wrap"><textarea data-maxwords="500" name="TR_NET_06_practices" rows="2"
                 placeholder="Successful arrangements, innovative governance solutions, references to agreements or joint programmes that could serve as models for other shared waterways…"></textarea>
+          <span class="word-counter" id="wc-TR_NET_06_practices">0 / 500 words</span>
+        </div>
             </div>
 
           </div>
         </div>
       </section>
 
-      <div class="nav-buttons">
-        <button class="btn btn-ghost" onclick="switchDim(3)">← Adaptive &amp; Sustainable</button>
-        <button class="btn btn-export" onclick="switchDim(0)">View Summary &amp; Export →</button>
+      <div class="nav-buttons" id="nav-dim4">
+        <div class="save-bar" style="width:100%">
+          <span class="save-bar-label">Auto-save active — progress stored in this browser</span>
+          <button class="btn-save" onclick="saveProgressToFile()">💾 Save progress to file</button>
+        </div>
       </div>
     </div>
 
   </main>
 
+
+
   <!-- SUMMARY PANEL (outside main content flow) -->
 </div>
+
+<div id="toast" class="toast"></div>
 
 <div id="summary-panel">
   <div style="max-width:760px; margin:0 auto;">
@@ -2871,15 +3014,62 @@
       </div>
     </div>
 
+    <!-- Additional Comments — shown in Summary only -->
+    <div style="margin-top:40px; border-top:1px solid var(--border2); padding-top:32px">
+      <div class="element-header" style="border-color:var(--accent2); margin-bottom:16px">
+        <span class="element-code" style="color:var(--accent2); font-size:13px">FINAL</span>
+        <div>
+          <span class="dim-badge" style="color:var(--accent2); background:rgba(196,135,58,0.1)">Optional</span>
+          <div style="font-size:18px; font-weight:700; color:var(--ink1); margin-top:4px">Additional Comments and Observations</div>
+          <p style="font-size:13px; color:var(--ink3); margin-top:4px">This section is optional. Use it to expand on any element, describe aspects not covered, or comment on the survey instrument.</p>
+        </div>
+      </div>
+
+      <div class="question">
+          <div class="question-id">FINAL.01 — Additional detail on specific elements</div>
+          <p class="question-text">If you wish to expand on any of the governance elements addressed in this survey (please cite the relevant question code, e.g. EN.GOV.02, OP.INF.08), please do so here. You may provide additional context, examples, references, or nuances that the structured questions did not fully capture.</p>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="FINAL_01" rows="5"
+            placeholder="[Question code] — additional detail or context…&#10;&#10;e.g. EN.REG.02 — In addition to the mechanisms listed, our jurisdiction applies a specific concession framework under Act No. X/YYYY that governs all private operators…"></textarea>
+          <span class="word-counter" id="wc-FINAL_01">0 / 400 words</span>
+        </div>
+      </div>
+
+      <div class="question">
+          <div class="question-id">FINAL.02 — Elements not covered in the survey</div>
+          <p class="question-text">Are there aspects of inland waterway governance in your country, region, or commission that were not addressed in this questionnaire and that you consider important for the benchmarking study? Please describe them here.</p>
+          <div class="textarea-wrap"><textarea data-maxwords="400" name="FINAL_02" rows="5"
+            placeholder="e.g. financial sustainability mechanisms, tariff regulation models, inter-basin transfer governance, heritage waterway management, specific transboundary treaty frameworks not covered above…"></textarea>
+          <span class="word-counter" id="wc-FINAL_02">0 / 400 words</span>
+        </div>
+      </div>
+
+      <div class="question">
+          <div class="question-id">FINAL.03 — General comments on the survey instrument</div>
+          <p class="question-text">Do you have any comments, suggestions, or observations about the survey itself — its structure, clarity, coverage, or any questions you found ambiguous or difficult to answer? Your feedback will help improve the instrument for future phases of the study.</p>
+          <div class="textarea-wrap"><textarea data-maxwords="300" name="FINAL_03" rows="4"
+            placeholder="Comments on survey structure, specific questions, missing topics, suggested improvements…"></textarea>
+          <span class="word-counter" id="wc-FINAL_03">0 / 300 words</span>
+        </div>
+      </div>
+    </div>
+
+
     <div id="summary-cards"></div>
 
     <div style="display:flex; gap:12px; margin-top:32px; flex-wrap:wrap;">
-      <button class="btn btn-export" onclick="exportJSON()">Export as JSON</button>
+      <button class="btn btn-export" onclick="exportJSON()">⬇ Export as JSON</button>
       <button class="btn btn-primary" onclick="exportText()">Export as Text Report</button>
+      <button class="btn-save" onclick="saveProgressToFile()" style="padding:10px 18px">💾 Save progress to file</button>
+      <label class="btn-save" style="padding:10px 18px; cursor:pointer">
+        📂 Resume from file
+        <input type="file" accept=".json" style="display:none" onchange="resumeFromFile(event)">
+      </label>
       <button class="btn btn-ghost" onclick="switchDim(1)">← Back to Form</button>
     </div>
     <p style="font-size:12px; color:var(--ink3); margin-top:12px; font-style:italic;">
-      Exports are downloaded as files. All data is stored locally in your browser only.
+      <strong>Export as JSON</strong> — final submission file to send to the research team.<br>
+      <strong>Save progress to file</strong> — saves a checkpoint file to your computer so you can resume later on any device.<br>
+      Auto-save is also active in this browser — your progress is stored automatically as you type.
     </p>
   </div>
 </div>
@@ -2966,12 +3156,14 @@ const matrices = {
     'Monitoring of fleet characteristics (age, compliance, efficiency)',
     'Incentives, technical standards, or renewal programs'
   ],
-  'tr-mlg-body': [
-    'Responsibilities for inland waterway management are delegated across levels of government under a supervised/coordinated framework (TR.MLG.03)',
-    'There are established mechanisms to resolve conflicts between institutions, sectors, or levels of government (TR.MLG.04)',
-    'Governance arrangements are stable over time, regardless of political or administrative changes (TR.MLG.05)'
-  ]
+  'tr-mlg-body': [] // replaced by mlgItems below
 };
+
+const mlgItems = [
+  { q: 'TR.MLG.03', text: 'Responsibilities for inland waterway management are delegated across levels of government under a supervised or coordinated framework', opts: ['Yes','Partially','No'] },
+  { q: 'TR.MLG.04', text: 'There are established mechanisms to resolve conflicts between institutions, sectors, or levels of government', opts: ['Yes','Partially','No'] },
+  { q: 'TR.MLG.05', text: 'Governance arrangements are stable over time, regardless of political or administrative changes', opts: ['Yes','Partially','No'] }
+];
 
 const ncItems = [
   { q: 'OP.NC.04', text: 'Minimum navigation conditions (depth, width, clearance) formally defined per stretch', opts: ['Yes','No'] },
@@ -3017,10 +3209,14 @@ document.addEventListener('DOMContentLoaded', () => {
   buildCountryGrid();
   buildMatrices();
   buildNCMatrix();
+  buildMLGMatrix();
   buildCurrencySelectors();
   buildSidebar('id');
   initOptLabels();
+  initWordCounters();
   updateProgress();
+  initAutoSave();
+  checkForSavedSession();
   // Pre-fill today's date
   const d = new Date();
   const df = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
@@ -3064,11 +3260,9 @@ const SCOPE_LABELS = {
 const SCOPE_TARGET = { full: 1, dim1: 1, dim2: 2, dim3: 3, dim4: 4 };
 
 function onScopeSelect(val) {
-  // Update opt-label checked state
   document.querySelectorAll('.scope-opt').forEach(l => {
     l.classList.toggle('checked', l.querySelector('input').value === val);
   });
-  // Show confirmation message
   const confirm = document.getElementById('scope-confirm');
   const btn = document.getElementById('proceed-btn');
   const hint = document.getElementById('id-nav-hint');
@@ -3076,9 +3270,8 @@ function onScopeSelect(val) {
     confirm.style.display = 'block';
     confirm.innerHTML = val === 'full'
       ? `<strong>Full survey selected.</strong> You will be taken to Dimension 1. Navigate between all dimensions using the tabs at the top. You may respond partially and return later to complete remaining sections.`
-      : `<strong>${SCOPE_LABELS[val]} selected.</strong> You will be taken directly to that dimension. You may respond partially and return later to add or update your answers before submitting the final export.`;
+      : `<strong>${SCOPE_LABELS[val]} selected.</strong> You will be taken directly to that dimension. The navigation will guide you through the selected dimension only and then prompt you to export. You may respond partially and return later to add or update your answers before submitting the final export.`;
   }
-  // Enable proceed button
   if (btn) {
     btn.disabled = false;
     btn.style.opacity = '1';
@@ -3088,6 +3281,8 @@ function onScopeSelect(val) {
       : `Go to ${SCOPE_LABELS[val].split('—')[0].trim()} →`;
   }
   if (hint) hint.style.display = 'none';
+  // Update tab visibility immediately so respondent sees only relevant tabs
+  updateTabVisibility();
 }
 
 // ── VALIDATE & PROCEED FROM ID PANEL ─────────────────────────────
@@ -3132,6 +3327,19 @@ function buildNCMatrix() {
     ).join('');
     const padded = item.opts.length < 3 ? cells + '<td></td>' : cells;
     tr.innerHTML = `<td><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--ink3)">${item.q}</span> ${item.text}</td>${padded}`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildMLGMatrix() {
+  const tbody = document.getElementById('tr-mlg-body');
+  if (!tbody) return;
+  mlgItems.forEach((item, i) => {
+    const tr = document.createElement('tr');
+    const cells = item.opts.map(opt =>
+      `<td><input type="radio" class="matrix-radio" name="TR_MLG_q${i}" value="${opt}" title="${opt}"></td>`
+    ).join('');
+    tr.innerHTML = `<td><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--ink3)">${item.q}</span> ${item.text}</td>${cells}`;
     tbody.appendChild(tr);
   });
 }
@@ -3189,10 +3397,83 @@ function buildSidebar(dim) {
   });
 }
 
+// ── SCOPE-AWARE NAVIGATION ────────────────────────────────────────
+const DIM_LABELS = {
+  1: 'Ethical-Normative',
+  2: 'Operational',
+  3: 'Adaptive & Sustainable',
+  4: 'Territorial'
+};
+
+// Returns ordered list of dimensions the current respondent should complete
+function getScopeDims() {
+  const scope = document.querySelector('input[name="RESP_scope"]:checked');
+  if (!scope || scope.value === 'full') return [1, 2, 3, 4];
+  const map = { dim1:[1], dim2:[2], dim3:[3], dim4:[4] };
+  return map[scope.value] || [1, 2, 3, 4];
+}
+
+function buildNavButtons(dim) {
+  const container = document.getElementById('nav-dim' + dim);
+  if (!container) return;
+
+  const dims   = getScopeDims();
+  const idx    = dims.indexOf(dim);
+  const prev   = idx > 0 ? dims[idx - 1] : null;
+  const next   = idx < dims.length - 1 ? dims[idx + 1] : null;
+  const isLast = !next;
+
+  // Remove old navigation buttons (keep the save-bar)
+  [...container.querySelectorAll('.nav-btn-dynamic')].forEach(b => b.remove());
+
+  const saveBar = container.querySelector('.save-bar');
+
+  if (prev !== null) {
+    const btnBack = document.createElement('button');
+    btnBack.className = 'btn btn-ghost nav-btn-dynamic';
+    btnBack.textContent = `← ${DIM_LABELS[prev]}`;
+    btnBack.onclick = () => switchDim(prev);
+    container.insertBefore(btnBack, saveBar);
+  } else {
+    // First dim — add back to identification
+    const btnId = document.createElement('button');
+    btnId.className = 'btn btn-ghost nav-btn-dynamic';
+    btnId.textContent = '← Identification';
+    btnId.onclick = () => switchDim('id');
+    container.insertBefore(btnId, saveBar);
+  }
+
+  if (isLast) {
+    // Last dimension for this respondent → Export
+    const btnExport = document.createElement('button');
+    btnExport.className = 'btn btn-export nav-btn-dynamic';
+    btnExport.textContent = 'View Summary & Export →';
+    btnExport.onclick = () => switchDim(0);
+    container.appendChild(btnExport);
+  } else {
+    // More dimensions to go
+    const btnNext = document.createElement('button');
+    btnNext.className = 'btn btn-primary nav-btn-dynamic';
+    btnNext.textContent = `Next: ${DIM_LABELS[next]} →`;
+    btnNext.onclick = () => switchDim(next);
+    container.appendChild(btnNext);
+  }
+}
+
+// Update dim-tabs visibility to show only relevant dimensions
+function updateTabVisibility() {
+  const dims = getScopeDims();
+  document.querySelectorAll('.dim-tab[data-dim]').forEach(tab => {
+    const d = tab.dataset.dim;
+    if (d === 'id' || d === '0') return; // always show id and summary tabs
+    const n = parseInt(d);
+    tab.style.display = dims.includes(n) ? '' : 'none';
+  });
+}
+
 // ── DIMENSION SWITCH ──────────────────────────────────────────────
 function switchDim(dim) {
   currentDim = dim;
-  // Panels
   document.querySelectorAll('.dim-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('summary-panel').classList.remove('active');
   document.getElementById('mainContent').style.display = 'flex';
@@ -3200,6 +3481,7 @@ function switchDim(dim) {
   if (dim === 0) {
     document.getElementById('mainContent').style.display = 'none';
     document.getElementById('summary-panel').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     buildSummary();
   } else if (dim === 'id') {
     const panel = document.getElementById('dimid');
@@ -3209,11 +3491,14 @@ function switchDim(dim) {
     const panel = document.getElementById('dim' + dim);
     if (panel) { panel.classList.add('active'); panel.scrollIntoView({ behavior:'smooth', block:'start' }); }
     buildSidebar(dim);
+    buildNavButtons(dim);
   }
+
   // Tabs
   document.querySelectorAll('.dim-tab').forEach(t => {
     t.classList.toggle('active', String(t.dataset.dim) === String(dim));
   });
+  updateTabVisibility();
   updateProgress();
 }
 
@@ -3241,26 +3526,89 @@ function toggleOtherText(checkbox, targetId) {
   }
 }
 
+// Exclusive checkbox — when the exclusive option (e.g. "None") is selected,
+// uncheck all others; when any other option is selected, uncheck the exclusive one.
+// Parameters:
+//   cb          — the checkbox that was just changed
+//   groupName   — the name attribute shared by all checkboxes in the group
+//   exclusiveVal — the value of the mutually-exclusive option (e.g. 'none')
+function exclusiveCheckbox(cb, groupName, exclusiveVal) {
+  const all = document.querySelectorAll(`input[type="checkbox"][name="${groupName}"]`);
+  if (cb.value === exclusiveVal && cb.checked) {
+    // Exclusive option just ticked → uncheck and clear all others
+    all.forEach(box => {
+      if (box.value !== exclusiveVal) {
+        box.checked = false;
+        box.closest('.opt-label')?.classList.remove('checked');
+        // If any unchecked box had an associated Other text field, clear it
+        if (box.getAttribute('onchange') && box.getAttribute('onchange').includes('toggleOtherText')) {
+          const match = box.getAttribute('onchange').match(/toggleOtherText\(this,'([^']+)'\)/);
+          if (match) {
+            const otherEl = document.getElementById(match[1]);
+            if (otherEl) {
+              otherEl.classList.remove('visible');
+              const inp = otherEl.querySelector('input');
+              if (inp) inp.value = '';
+            }
+          }
+        }
+      }
+    });
+  } else if (cb.value !== exclusiveVal && cb.checked) {
+    // Regular option ticked → uncheck the exclusive option
+    all.forEach(box => {
+      if (box.value === exclusiveVal) {
+        box.checked = false;
+        box.closest('.opt-label')?.classList.remove('checked');
+      }
+    });
+  }
+}
+
 // ── PROGRESS ──────────────────────────────────────────────────────
 function updateProgress() {
+  // Checks whether a field is inside a hidden conditional block
+  function isHidden(el) {
+    let node = el.parentElement;
+    while (node) {
+      if (node.classList && node.classList.contains('conditional') &&
+          !node.classList.contains('visible')) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
   const all = document.querySelectorAll(
-    '.dim-panel input[type="radio"], .dim-panel input[type="checkbox"], .dim-panel textarea, .dim-panel input[type="text"], .dim-panel input[type="number"]'
+    '.dim-panel input[type="radio"], .dim-panel textarea, .dim-panel input[type="text"], .dim-panel input[type="number"]'
   );
-  let answered = 0;
-  const seen = new Set();
+
+  let answered = 0, total = 0;
+  const seenRadios = new Set();
+
   all.forEach(el => {
+    if (isHidden(el)) return; // never count fields inside hidden conditionals
+
     if (el.type === 'radio') {
-      if (!seen.has(el.name)) {
-        seen.add(el.name);
+      if (!seenRadios.has(el.name)) {
+        seenRadios.add(el.name);
+        total++;
         if (document.querySelector(`input[name="${el.name}"]:checked`)) answered++;
       }
-    } else if (el.type === 'checkbox') {
-      // count group once
     } else {
-      if (el.value && el.value.trim()) answered++;
+      // Text / textarea / number — only count if not inside ANY conditional,
+      // OR if inside a conditional that is currently visible (triggered by Yes/Partially)
+      const inConditional = el.closest('.conditional');
+      if (!inConditional || inConditional.classList.contains('visible')) {
+        // Standalone open-ended fields are optional — count them but don't block 100%
+        // We mark them with data-optional to exclude from the total
+        if (!el.dataset.optional) {
+          total++;
+          if (el.value && el.value.trim()) answered++;
+        }
+      }
     }
   });
-  const total = seen.size + document.querySelectorAll('.dim-panel textarea, .dim-panel input[type="text"], .dim-panel input[type="number"]').length;
+
   const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
   document.getElementById('globalProgress').style.width = pct + '%';
 }
@@ -3312,15 +3660,51 @@ function buildSummary() {
     d.items.forEach(item => {
       const el = document.getElementById(item.id);
       if (!el) return;
-      const radios = el.querySelectorAll('input[type="radio"]:checked');
-      const texts = el.querySelectorAll('textarea');
-      const filled = radios.length + [...texts].filter(t=>t.value.trim()).length;
-      const total = new Set([...el.querySelectorAll('input[type="radio"]')].map(r=>r.name)).size + texts.length;
-      const pct = total > 0 ? Math.round((filled/total)*100) : 0;
+
+      // Helper: is a field inside a hidden conditional?
+      function hidden(node) {
+        let p = node.parentElement;
+        while (p) {
+          if (p.classList && p.classList.contains('conditional') &&
+              !p.classList.contains('visible')) return true;
+          p = p.parentElement;
+        }
+        return false;
+      }
+
+      // Count radio groups — each unique name = one question
+      const radioNames = new Set(
+        [...el.querySelectorAll('input[type="radio"]')]
+          .filter(r => !hidden(r))
+          .map(r => r.name)
+      );
+      const radioAnswered = [...radioNames].filter(name =>
+        el.querySelector(`input[name="${name}"]:checked`)
+      ).length;
+
+      // Count checkbox groups — each unique name = one question
+      // A checkbox group is "answered" if at least one option is checked
+      const checkNames = new Set(
+        [...el.querySelectorAll('input[type="checkbox"]')]
+          .filter(c => !hidden(c))
+          .map(c => c.name)
+          .filter(n => n) // exclude nameless
+      );
+      const checkAnswered = [...checkNames].filter(name =>
+        el.querySelector(`input[name="${name}"]:checked`)
+      ).length;
+
+      const total    = radioNames.size + checkNames.size;
+      const answered = radioAnswered + checkAnswered;
+      const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+
+      // Colour: green ≥80%, amber 40–79%, red <40%
+      const colour = pct >= 80 ? '#276749' : pct >= 40 ? '#92400E' : '#9B2C2C';
+
       rows += `<div class="completion-meter">
         <span style="font-size:13px;min-width:160px">${item.code} — ${item.label}</span>
-        <div class="completion-bar"><div class="completion-fill" style="width:${pct}%"></div></div>
-        <span class="completion-pct">${pct}%</span>
+        <div class="completion-bar"><div class="completion-fill" style="width:${pct}%;background:${colour}"></div></div>
+        <span class="completion-pct" style="color:${colour}">${pct}%</span>
       </div>`;
     });
     card.innerHTML = `<h3>Dimension ${d.dim} — ${d.label}</h3>${rows}
@@ -3330,54 +3714,42 @@ function buildSummary() {
 }
 
 // ── VALIDITY ASSESSMENT ──────────────────────────────────────────
+// Checks are derived from existing survey answers — no separate questions shown to respondent.
 function assessValidity(data) {
   const results = { valid: true, checks: {} };
 
-  // Check 1 — Duplicate question with inverted options
-  // OP.MOOR.04 (OP_MOOR_04_pct): <50%, 50-75%, 75-90%, >90%
-  // AD.RISK.03a (VAL_CHECK1):    >90%, 75-90%, 50-75%, <50%
+  // Check 1 — Consistency: OP.MOOR.04 safety compliance (ascending) vs
+  //            OP.ACC.04 vessels served (used as proxy cross-check on operational scale)
+  // Simplified: check that OP_MOOR_04_pct was answered (presence check)
   const moor = data['OP_MOOR_04_pct'];
-  const risk = data['VAL_CHECK1'];
-  const check1Pass = !moor || !risk || moor === risk;
+  const check1Pass = true; // passive — flag if key field unanswered
   results.checks.check1 = {
-    label: 'Consistency check — terminal safety compliance',
-    op_moor_04: moor || '(not answered)',
-    ad_risk_03a: risk || '(not answered)',
-    consistent: check1Pass
+    label: 'Completeness — terminal safety compliance field',
+    op_moor_04_pct: moor || '(not answered)',
+    answered: !!moor
   };
-  if (!check1Pass) results.valid = false;
 
-  // Check 2 — Attention check
-  // Correct answer: port_revenue (Annual port revenue per vessel call)
-  const attn = data['VAL_ATTN'];
-  const check2Pass = !attn || attn === 'port_revenue';
+  // Check 2 — Attention: derived from OP.NC.09 digital tools selection.
+  // A respondent who selects RIS, AIS, VTS etc. in OP.NC.09 is demonstrably
+  // engaged with the content. We flag if OP.NC.09 was answered.
+  const nc09 = data['OP_NC_09'] || (Array.isArray(data['OP_NC_09_tools']) ? data['OP_NC_09_tools'] : null);
   results.checks.check2 = {
-    label: 'Attention check — non-safety indicator',
-    answer: attn || '(not answered)',
-    correct: check2Pass
+    label: 'Engagement check — OP.NC.09 digital tools',
+    answered: !!(nc09 && nc09.length > 0)
   };
-  if (!check2Pass) results.valid = false;
 
-  // Check 3 — Related factual questions in different sections (Option A)
-  // EN.REG.01a (VAL_CHECK3A): existence of regulatory provision for multiple water use coexistence
-  //   Yes_dedicated | Yes_broader | No | NA
-  // TR.LAND.01a (VAL_CHECK3B): formal instrument governing navigation vs other water uses
-  //   Yes_dedicated | Yes_broader | No | NA
-  // Mapping: identical values are consistent (both share same four options)
-  const c3a = data['VAL_CHECK3A'];
-  const c3b = data['VAL_CHECK3B'];
-  // Consistent if both answered the same category
-  // Yes_dedicated ↔ Yes_dedicated | Yes_broader ↔ Yes_broader | No ↔ No | NA ↔ NA
-  // Also accept Yes_dedicated ↔ Yes_broader as partially consistent (both affirm existence)
-  const c3aYes = c3a && c3a.startsWith('Yes');
-  const c3bYes = c3b && c3b.startsWith('Yes');
-  const check3Pass = !c3a || !c3b ||
-    c3a === c3b ||
-    (c3aYes && c3bYes); // both affirm existence of instrument — consistent
+  // Check 3 — Cross-section consistency: EN.REG.01 (regulatory framework) vs
+  //            TR.LAND.01 (land/water use planning).
+  // If EN_REG_01 = Yes/Partially AND TR_LAND_01 = No → possible inconsistency
+  const reg01 = data['EN_REG_01'];
+  const land01 = data['TR_LAND_01'];
+  const regYes = reg01 && (reg01 === 'Yes' || reg01 === 'Partially');
+  const landNo  = land01 && land01 === 'No';
+  const check3Pass = !(regYes && landNo); // flag only if strong contradiction
   results.checks.check3 = {
-    label: 'Consistency check — regulatory provision for multiple water use coexistence',
-    en_reg_01a: c3a || '(not answered)',
-    tr_land_01a: c3b || '(not answered)',
+    label: 'Cross-section consistency — regulatory framework vs territorial planning',
+    EN_REG_01: reg01 || '(not answered)',
+    TR_LAND_01: land01 || '(not answered)',
     consistent: check3Pass
   };
   if (!check3Pass) results.valid = false;
@@ -3552,6 +3924,216 @@ function convertCurrency(amtId, selId, displayId) {
   display.textContent = `≈ USD ${formatted}`;
   display.className = 'currency-usd-display';
   if (hidUsd) hidUsd.value = usd.toFixed(2);
+}
+
+// ── WORD COUNTER ─────────────────────────────────────────────────
+function countWords(text) {
+  return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+}
+
+function initWordCounters() {
+  document.querySelectorAll('textarea[data-maxwords]').forEach(ta => {
+    const limit = parseInt(ta.dataset.maxwords, 10);
+    const name  = ta.name;
+    const span  = document.getElementById('wc-' + name);
+    if (!span) return;
+
+    function update() {
+      const words = countWords(ta.value);
+      const pct   = words / limit;
+      span.textContent = `${words} / ${limit} words`;
+      span.className = 'word-counter';
+      if (pct >= 1.0)       span.classList.add('over');
+      else if (pct >= 0.85) span.classList.add('warn');
+    }
+
+    ta.addEventListener('input', update);
+    ta.addEventListener('change', update);
+    update(); // initialise on load / restore
+  });
+}
+
+
+function showToast(msg, type = 'success', duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => { t.className = 'toast'; }, duration);
+}
+
+// ── LOCAL STORAGE AUTO-SAVE ───────────────────────────────────────
+const LS_KEY = 'wg263_survey_autosave';
+
+function autoSaveToStorage() {
+  try {
+    const data = collectData();
+    const payload = {
+      _autosave: true,
+      _timestamp: new Date().toISOString(),
+      _version: 'WG263-v1',
+      responses: data
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(payload));
+    updateStorageStatus();
+  } catch(e) {
+    // localStorage may be unavailable in some environments — fail silently
+  }
+}
+
+function updateStorageStatus() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    const ts = data._timestamp ? new Date(data._timestamp) : null;
+    const label = ts ? `Auto-saved at ${ts.toLocaleTimeString()} on ${ts.toLocaleDateString()}` : 'Auto-save active';
+    document.querySelectorAll('.save-bar-label').forEach(el => {
+      el.innerHTML = `Auto-save: <strong>${label}</strong>`;
+    });
+  } catch(e) {}
+}
+
+function restoreFromStorage(data) {
+  const responses = data.responses || data; // handle both payload and raw formats
+  Object.entries(responses).forEach(([name, value]) => {
+    if (name.startsWith('_')) return;
+    if (Array.isArray(value)) {
+      // checkboxes
+      document.querySelectorAll(`input[type="checkbox"][name="${name}"]`).forEach(cb => {
+        cb.checked = value.includes(cb.value);
+        if (cb.checked && cb.getAttribute('onchange')) {
+          try { cb.dispatchEvent(new Event('change')); } catch(e) {}
+        }
+      });
+    } else {
+      // radio
+      const radio = document.querySelector(`input[type="radio"][name="${name}"][value="${CSS.escape(value)}"]`);
+      if (radio) {
+        radio.checked = true;
+        try { radio.dispatchEvent(new Event('change')); } catch(e) {}
+      }
+      // text / textarea / select
+      const inputs = document.querySelectorAll(`[name="${name}"]:not([type="radio"]):not([type="checkbox"])`);
+      inputs.forEach(el => { el.value = value; });
+    }
+  });
+  // Refresh opt-label checked classes
+  document.querySelectorAll('.opt-label input[type="radio"]:checked').forEach(r => {
+    r.closest('.opt-label')?.classList.add('checked');
+  });
+  // Re-run conditional logic for restored radios
+  document.querySelectorAll('input[type="radio"]:checked[onchange]').forEach(r => {
+    try { r.dispatchEvent(new Event('change')); } catch(e) {}
+  });
+  updateProgress();
+  initOptLabels();
+  // Refresh word counters after restore
+  document.querySelectorAll('textarea[data-maxwords]').forEach(ta => {
+    ta.dispatchEvent(new Event('input'));
+  });
+}
+
+function resumeFromStorage() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    restoreFromStorage(data);
+    document.getElementById('resume-box').classList.remove('visible');
+    showToast('Session restored successfully.', 'success');
+    updateStorageStatus();
+  } catch(e) {
+    showToast('Could not restore session. File may be corrupted.', 'error');
+  }
+}
+
+function clearStorageAndReset() {
+  try { localStorage.removeItem(LS_KEY); } catch(e) {}
+  document.getElementById('resume-box').classList.remove('visible');
+  showToast('Starting fresh — previous session cleared.', 'warning');
+}
+
+function checkForSavedSession() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    // Only show resume box if there is meaningful data saved
+    const responses = data.responses || {};
+    const hasData = Object.keys(responses).filter(k => !k.startsWith('_')).length > 2;
+    if (hasData) {
+      document.getElementById('resume-box').classList.add('visible');
+      updateStorageStatus();
+    }
+  } catch(e) {}
+}
+
+// ── SAVE PROGRESS TO FILE ─────────────────────────────────────────
+function saveProgressToFile() {
+  const data = collectData();
+  const country = document.querySelector('input[name="RESP_country"]:checked');
+  const scope   = document.querySelector('input[name="RESP_scope"]:checked');
+  const payload = {
+    _autosave: true,
+    _version: 'WG263-v1',
+    _timestamp: new Date().toISOString(),
+    _note: 'This is a PROGRESS file, not a final submission. Use Export as JSON for final submission.',
+    respondent: {
+      country: country ? country.value : '',
+      response_scope: scope ? scope.value : ''
+    },
+    responses: data
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const fname = (country ? country.value : 'Draft').replace(/\s+/g, '_');
+  const date  = new Date().toISOString().slice(0, 10);
+  a.download  = `WG263_PROGRESS_${fname}_${date}.json`;
+  a.click();
+  showToast('Progress file saved — keep it safe to resume later.', 'success', 4000);
+}
+
+// ── RESUME FROM FILE ──────────────────────────────────────────────
+function resumeFromFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      // Accept both progress files and final export files
+      if (!data.responses && !data._autosave) {
+        showToast('File not recognised. Please use a WG263 progress or export file.', 'error', 4000);
+        return;
+      }
+      restoreFromStorage(data);
+      // Also update localStorage with this state
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ ...data, _timestamp: new Date().toISOString() })); } catch(e) {}
+      showToast('Progress restored from file successfully.', 'success');
+      updateStorageStatus();
+      // Navigate to the identification panel
+      switchDim('id');
+    } catch(err) {
+      showToast('Could not read file. Please ensure it is a valid WG263 JSON file.', 'error', 4000);
+    }
+  };
+  reader.readAsText(file);
+  // Reset input so same file can be loaded again if needed
+  event.target.value = '';
+}
+
+// ── WIRE AUTO-SAVE TO ALL INPUTS ─────────────────────────────────
+function initAutoSave() {
+  let saveTimer = null;
+  document.addEventListener('change', () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(autoSaveToStorage, 800); // debounce 800ms
+  });
+  document.addEventListener('input', () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(autoSaveToStorage, 800);
+  });
 }
 
 </script>
